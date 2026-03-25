@@ -225,23 +225,37 @@ def train(
     padding = False # "max_length"
     prefix = ""
     def preprocess_function(examples):
-        inputs = examples['input'] 
+        inputs = examples['input']
         targets = examples['output']
+
         inputs = [prefix + inp for inp in inputs]
-        model_inputs = tokenizer(inputs, max_length=max_input_length, padding=padding, truncation=True)
+
+        # Tokenize inputs
+        model_inputs = tokenizer(
+            inputs,
+            max_length=max_input_length,
+            padding=padding,
+            truncation=True
+        )
+
+        # Tokenize targets đúng chuẩn T5
         labels = tokenizer(
-            targets,
+            text_target=targets,
             max_length=max_target_length,
             padding=padding,
             truncation=True
         )
 
+        label_ids = labels["input_ids"]
+
+        # Replace pad token with -100 (ignore loss)
         if padding == "max_length" and ignore_pad_token_for_loss:
-            labels["input_ids"] = [
-                [(l if l != tokenizer.pad_token_id else -100) for l in label] for label in labels["input_ids"]
+            label_ids = [
+                [(l if l != tokenizer.pad_token_id else -100) for l in label]
+                for label in label_ids
             ]
 
-        model_inputs["labels"] = labels["input_ids"]
+        model_inputs["labels"] = label_ids
         return model_inputs
 
     config = LoraConfig(
