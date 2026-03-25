@@ -229,8 +229,12 @@ def train(
         targets = examples['output']
         inputs = [prefix + inp for inp in inputs]
         model_inputs = tokenizer(inputs, max_length=max_input_length, padding=padding, truncation=True)
-        with tokenizer.as_target_tokenizer():
-            labels = tokenizer(targets, max_length=max_target_length, padding=padding, truncation=True)
+        labels = tokenizer(
+            targets,
+            max_length=max_target_length,
+            padding=padding,
+            truncation=True
+        )
 
         if padding == "max_length" and ignore_pad_token_for_loss:
             labels["input_ids"] = [
