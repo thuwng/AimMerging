@@ -30,7 +30,6 @@ from peft import (
     prepare_model_for_int8_training,
     set_peft_model_state_dict,
 )
-from transformers import LlamaForCausalLM, LlamaTokenizer
 
 from utils.prompter import Prompter
 from utils.prompter import Prompter
@@ -391,7 +390,7 @@ def train(
 
     trainer.train(resume_from_checkpoint=resume_from_checkpoint)
 
-    if train_data_memory:
+    if train_data_memory is not None:
         delta_in_abs_change_list, delta_in_abs_change_step_list, inner_step_list = rankallocator.show_delta_in_abs_change()
         print(f"delta_in_abs_change_list: {delta_in_abs_change_list}")
         print(f"delta_in_abs_change_step_list: {delta_in_abs_change_step_list}")

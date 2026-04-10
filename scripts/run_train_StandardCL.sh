@@ -45,8 +45,8 @@ do
         --max_step_len=${max_step_len} \
         --min_step_len=${min_step_len} \
         --empty_inner_score_flag=1 \
-        --adaptive_merge_flag='True' \
-        --threshold_factor=2.0 \
+        --adaptive_merge_flag=True \
+        --threshold_factor=2.0 
 
 
 done
