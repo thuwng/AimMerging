@@ -1,6 +1,14 @@
 #!/bin/bash
 
-export PYTHONPATH=$PYTHONPATH:$(pwd)/src
+# 1. Ép Python nhìn vào cả thư mục gốc và thư mục src
+export PYTHONPATH=$PYTHONPATH:/kaggle/working/AIMMerging:/kaggle/working/AIMMerging/src
+
+# 2. Kiểm tra nhanh xem đường dẫn có đúng không
+if [ -d "/kaggle/working/AIMMerging/src/utils" ]; then
+    echo "✅ Đã tìm thấy thư mục utils tại /src"
+else
+    echo "❌ Không tìm thấy thư mục utils. Kiểm tra lại đường dẫn!"
+fi
 
 # 设置起始变量
 
