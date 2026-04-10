@@ -1,8 +1,10 @@
 #!/bin/bash
 
+export PYTHONPATH=$PYTHONPATH:$(pwd)/src
+
 # 设置起始变量
 
-CUDA_DEVICE=2
+CUDA_DEVICE=0
 
 begin_id=0
 # 初始的迭代步长，后续会自适应调整
