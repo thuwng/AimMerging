@@ -28,7 +28,7 @@ from packaging import version
 
 from .debug_utils import DebugOption
 from .trainer_utils import (
-    EvaluationStrategy,
+    IntervalStrategy,
     FSDPOption,
     HubStrategy,
     IntervalStrategy,
@@ -1142,7 +1142,7 @@ class TrainingArguments:
         if self.disable_tqdm is None:
             self.disable_tqdm = logger.getEffectiveLevel() > logging.WARN
 
-        if isinstance(self.evaluation_strategy, EvaluationStrategy):
+        if isinstance(self.evaluation_strategy, IntervalStrategy,):
             warnings.warn(
                 "using `EvaluationStrategy` for `evaluation_strategy` is deprecated and will be removed in version 5"
                 " of 🤗 Transformers. Use `IntervalStrategy` instead",
