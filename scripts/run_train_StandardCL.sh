@@ -1,17 +1,8 @@
 #!/bin/bash
-# lấy thư mục chứa file .sh
-SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-
-# đi lên root repo (scripts/ → ../)
-PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
-
-cd "$PROJECT_ROOT"
-
-export PYTHONPATH="$PROJECT_ROOT:$PROJECT_ROOT/src:$PYTHONPATH"
 
 # 设置起始变量
 
-CUDA_DEVICE=0
+CUDA_DEVICE=2
 
 begin_id=0
 # 初始的迭代步长，后续会自适应调整
@@ -39,8 +30,8 @@ for ((ORDER=$begin_id; ORDER<4; ORDER++))
 do
     # 执行 Python 文件，传递参数 $i
 
-    CUDA_VISIBLE_DEVICES=$CUDA_DEVICE python src/finetune_ours.py \
-        --base_model 't5-large' \
+    CUDA_VISIBLE_DEVICES=$CUDA_DEVICE python finetune_ours_t5lora.py \
+        --base_model '/your_model_path' \
         --method_name "${method_name}" \
         --num_epochs=10 \
         --dataset_id=${data_id} \
@@ -54,8 +45,8 @@ do
         --max_step_len=${max_step_len} \
         --min_step_len=${min_step_len} \
         --empty_inner_score_flag=1 \
-        --adaptive_merge_flag=True \
-        --threshold_factor=2.0 
+        --adaptive_merge_flag='True' \
+        --threshold_factor=2.0 \
 
 
 done
@@ -64,8 +55,8 @@ done
 wait
 
 
-CUDA_VISIBLE_DEVICES=$CUDA_DEVICE python src/generate_avgPerf.py \
-    --base_model 't5-large' \
+CUDA_VISIBLE_DEVICES=$CUDA_DEVICE python generate_avgPerf_t5lora.py \
+    --base_model '/your_model_path' \
     --dataset_id=${data_id} \
     --method_name "${method_name}" \
 
@@ -75,8 +66,8 @@ wait
 for ((ORDER=$begin_id; ORDER<4; ORDER++))
 do
     # 执行 Python 文件，传递参数 $i
-    CUDA_VISIBLE_DEVICES=$CUDA_DEVICE python src/generate_bwt.py \
-        --base_model 't5-large' \
+    CUDA_VISIBLE_DEVICES=$CUDA_DEVICE python generate_bwt_t5lora.py \
+        --base_model '/your_model_path' \
         --dataset_id=${data_id} \
         --service_begin_id=${ORDER} \
         --method_name "${method_name}" \

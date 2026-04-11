@@ -1,18 +1,11 @@
 # 新的框架
 
-import sys, os
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-
-import peft
-if not hasattr(peft, "PeftMixedModel"):
-    from peft import PeftModel
-    peft.PeftMixedModel = PeftModel
-
+import os
 import matplotlib.pyplot as plt
 
-
+import sys
 from typing import List
-
+from peft import PeftModel
 import fire
 import torch
 import transformers
@@ -34,10 +27,10 @@ from peft import (
     LoraConfig,
     get_peft_model,
     get_peft_model_state_dict,
-    prepare_model_for_kbit_training,
+    prepare_model_for_int8_training,
     set_peft_model_state_dict,
 )
-prepare_model_for_int8_training = prepare_model_for_kbit_training
+from transformers import LlamaForCausalLM, LlamaTokenizer
 
 from utils.prompter import Prompter
 from utils.prompter import Prompter
@@ -236,13 +229,9 @@ def train(
         targets = examples['output']
         inputs = [prefix + inp for inp in inputs]
         model_inputs = tokenizer(inputs, max_length=max_input_length, padding=padding, truncation=True)
-        labels = tokenizer(
-            text_target=targets,
-            max_length=max_target_length,
-            padding=padding,
-            truncation=True
-        )
-        
+        with tokenizer.as_target_tokenizer():
+            labels = tokenizer(targets, max_length=max_target_length, padding=padding, truncation=True)
+
         if padding == "max_length" and ignore_pad_token_for_loss:
             labels["input_ids"] = [
                 [(l if l != tokenizer.pad_token_id else -100) for l in label] for label in labels["input_ids"]
@@ -348,10 +337,24 @@ def train(
     trainer = transformers.Trainer(
         model=model,
         train_dataset=train_data,
+        train_dataset_memory=train_data_memory, # new
         eval_dataset=val_data,
+        ipt_score = rankallocator,
+        outer_lr=outer_lr, # new
+        empty_inner_score_flag=empty_inner_score_flag, # new
+        empty_outer_score_flag=empty_outer_score_flag, # new
+        outer_iterations=outer_iterations, # new
+        adaptive_merge_flag=adaptive_merge_flag,
+        cal_vanilla_para_change_flag=cal_vanilla_para_change_flag,
+        cold_start_step = cold_start_step, #new
+        max_step_len = max_step_len, #new
+        min_step_len = min_step_len, #new
+        threshold_factor = threshold_factor,
         args=transformers.TrainingArguments(
             per_device_train_batch_size=micro_batch_size,
             gradient_accumulation_steps=gradient_accumulation_steps,
+            train_batch_size_outer=train_batch_size_outer,# new
+            inner_iterations=inner_iterations, # new
             warmup_steps=50,
             num_train_epochs=num_epochs,
             learning_rate=learning_rate,
@@ -388,7 +391,7 @@ def train(
 
     trainer.train(resume_from_checkpoint=resume_from_checkpoint)
 
-    if train_data_memory is not None:
+    if train_data_memory:
         delta_in_abs_change_list, delta_in_abs_change_step_list, inner_step_list = rankallocator.show_delta_in_abs_change()
         print(f"delta_in_abs_change_list: {delta_in_abs_change_list}")
         print(f"delta_in_abs_change_step_list: {delta_in_abs_change_step_list}")
