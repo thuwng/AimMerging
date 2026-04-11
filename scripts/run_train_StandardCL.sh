@@ -30,7 +30,7 @@ for ((ORDER=$begin_id; ORDER<4; ORDER++))
 do
     # 执行 Python 文件，传递参数 $i
 
-    CUDA_VISIBLE_DEVICES=$CUDA_DEVICE python src/finetune_ours_t5lora.py \
+    CUDA_VISIBLE_DEVICES=$CUDA_DEVICE python src/finetune_ours.py \
         --base_model '/your_model_path' \
         --method_name "${method_name}" \
         --num_epochs=10 \
@@ -55,7 +55,7 @@ done
 wait
 
 
-CUDA_VISIBLE_DEVICES=$CUDA_DEVICE python src/generate_avgPerf_t5lora.py \
+CUDA_VISIBLE_DEVICES=$CUDA_DEVICE python src/generate_avgPerf.py \
     --base_model '/your_model_path' \
     --dataset_id=${data_id} \
     --method_name "${method_name}" \
@@ -66,7 +66,7 @@ wait
 for ((ORDER=$begin_id; ORDER<4; ORDER++))
 do
     # 执行 Python 文件，传递参数 $i
-    CUDA_VISIBLE_DEVICES=$CUDA_DEVICE python src/generate_bwt_t5lora.py \
+    CUDA_VISIBLE_DEVICES=$CUDA_DEVICE python src/generate_bwt.py \
         --base_model '/your_model_path' \
         --dataset_id=${data_id} \
         --service_begin_id=${ORDER} \
