@@ -28,12 +28,16 @@ from packaging import version
 
 from .debug_utils import DebugOption
 from .trainer_utils import (
+    EvaluationStrategy,
+    FSDPOption,
+    HubStrategy,
     IntervalStrategy,
     SchedulerType,
-    HubStrategy,
+    ShardedDDPOption,
 )
 from .utils import (
     ExplicitEnum,
+    cached_property,
     ccl_version,
     get_full_repo_name,
     is_accelerate_available,
@@ -52,7 +56,6 @@ from .utils import (
 )
 from .utils.import_utils import is_optimum_neuron_available
 
-from functools import cached_property
 
 logger = logging.get_logger(__name__)
 log_levels = logging.get_log_levels_dict().copy()
@@ -931,7 +934,7 @@ class TrainingArguments:
             )
         },
     )
-    fsdp_config: Optional[dict] = field(
+    fsdp_config: Optional[str] = field(
         default=None,
         metadata={
             "help": (
@@ -1139,7 +1142,7 @@ class TrainingArguments:
         if self.disable_tqdm is None:
             self.disable_tqdm = logger.getEffectiveLevel() > logging.WARN
 
-        if isinstance(self.evaluation_strategy, IntervalStrategy,):
+        if isinstance(self.evaluation_strategy, EvaluationStrategy):
             warnings.warn(
                 "using `EvaluationStrategy` for `evaluation_strategy` is deprecated and will be removed in version 5"
                 " of 🤗 Transformers. Use `IntervalStrategy` instead",
@@ -1151,7 +1154,7 @@ class TrainingArguments:
         self.evaluation_strategy = IntervalStrategy(self.evaluation_strategy)
         self.logging_strategy = IntervalStrategy(self.logging_strategy)
         self.save_strategy = IntervalStrategy(self.save_strategy)
-        self.hub_strategy = self.hub_strategy
+        self.hub_strategy = HubStrategy(self.hub_strategy)
 
         self.lr_scheduler_type = SchedulerType(self.lr_scheduler_type)
         if self.do_eval is False and self.evaluation_strategy != IntervalStrategy.NO:
@@ -1233,6 +1236,8 @@ class TrainingArguments:
                     " `--half_precision_backend apex`: GPU bf16 is not supported by apex. Use"
                     " `--half_precision_backend cuda_amp` instead"
                 )
+            if not (self.sharded_ddp == "" or not self.sharded_ddp):
+                raise ValueError("sharded_ddp is not supported with bf16")
 
         self.optim = OptimizerNames(self.optim)
         if self.adafactor:
@@ -1334,16 +1339,90 @@ class TrainingArguments:
                 " during training"
             )
 
-        # ===== DISABLE sharded_ddp =====
-        if hasattr(self, "sharded_ddp"):
-            self.sharded_ddp = ""
+        if isinstance(self.sharded_ddp, bool):
+            self.sharded_ddp = "simple" if self.sharded_ddp else ""
+        if isinstance(self.sharded_ddp, str):
+            self.sharded_ddp = [ShardedDDPOption(s) for s in self.sharded_ddp.split()]
+        if self.sharded_ddp == [ShardedDDPOption.OFFLOAD]:
+            raise ValueError(
+                "`--sharded_ddp offload` can't work on its own. It needs to be added to `--sharded_ddp zero_dp_2` or "
+                '`--sharded_ddp zero_dp_3`. For example, `--sharded_ddp "zero_dp_2 offload"`.'
+            )
+        elif len(self.sharded_ddp) > 1 and ShardedDDPOption.SIMPLE in self.sharded_ddp:
+            raise ValueError("`--sharded_ddp simple` is not compatible with any other option.")
+        elif ShardedDDPOption.ZERO_DP_2 in self.sharded_ddp and ShardedDDPOption.ZERO_DP_3 in self.sharded_ddp:
+            raise ValueError("`--sharded_ddp zero_dp_2` is not compatible with `--sharded_ddp zero_dp_3`.")
 
-        # ===== DISABLE fsdp =====
-        if hasattr(self, "fsdp"):
-            self.fsdp = ""
+        if isinstance(self.fsdp, bool):
+            self.fsdp = "full_shard" if self.fsdp else ""
+        if isinstance(self.fsdp, str):
+            self.fsdp = [FSDPOption(s) for s in self.fsdp.split()]
+        if self.fsdp == [FSDPOption.OFFLOAD]:
+            raise ValueError(
+                "`--fsdp offload` can't work on its own. It needs to be added to `--fsdp full_shard` or "
+                '`--fsdp shard_grad_op`. For example, `--fsdp "full_shard offload"`.'
+            )
+        elif FSDPOption.FULL_SHARD in self.fsdp and FSDPOption.SHARD_GRAD_OP in self.fsdp:
+            raise ValueError("`--fsdp full_shard` is not compatible with `--fsdp shard_grad_op`.")
 
-        if hasattr(self, "fsdp_config") and self.fsdp_config is None:
+        if self.fsdp_config is None:
             self.fsdp_config = {}
+
+        if isinstance(self.fsdp_config, str):
+            with io.open(self.fsdp_config, "r", encoding="utf-8") as f:
+                self.fsdp_config = json.load(f)
+
+        if self.fsdp_min_num_params > 0:
+            warnings.warn("using `--fsdp_min_num_params` is deprecated. Use fsdp_config instead ", FutureWarning)
+
+        self.fsdp_config["fsdp_min_num_params"] = max(
+            self.fsdp_config.get("fsdp_min_num_params", 0), self.fsdp_min_num_params
+        )
+
+        # if fsdp_config["fsdp_transformer_layer_cls_to_wrap"] is specified as a string, convert it to a list with a single object
+        if isinstance(self.fsdp_config.get("fsdp_transformer_layer_cls_to_wrap", None), str):
+            self.fsdp_config["fsdp_transformer_layer_cls_to_wrap"] = [
+                self.fsdp_config["fsdp_transformer_layer_cls_to_wrap"]
+            ]
+
+        if self.fsdp_transformer_layer_cls_to_wrap is not None:
+            warnings.warn(
+                "using `--fsdp_transformer_layer_cls_to_wrap` is deprecated. Use fsdp_config instead ", FutureWarning
+            )
+            self.fsdp_config["fsdp_transformer_layer_cls_to_wrap"] = self.fsdp_config.get(
+                "fsdp_transformer_layer_cls_to_wrap", []
+            ) + [self.fsdp_transformer_layer_cls_to_wrap]
+
+        if len(self.fsdp) == 0 and self.fsdp_config["fsdp_min_num_params"] > 0:
+            warnings.warn("`--fsdp_min_num_params` is useful only when `--fsdp` is specified.")
+
+        if len(self.fsdp) == 0 and self.fsdp_config.get("fsdp_transformer_layer_cls_to_wrap", None) is not None:
+            warnings.warn("`--fsdp_transformer_layer_cls_to_wrap` is useful only when `--fsdp` is specified.")
+
+        if (
+            len(self.fsdp) > 0
+            and self.fsdp_config["fsdp_min_num_params"] > 0
+            and self.fsdp_config.get("fsdp_transformer_layer_cls_to_wrap", None) is not None
+        ):
+            raise ValueError(
+                "`--fsdp_min_num_params` and `--fsdp_transformer_layer_cls_to_wrap` are mutually exclusive."
+            )
+        self.fsdp_config["xla"] = self.fsdp_config.get("xla", False)
+        self.fsdp_config["xla_fsdp_grad_ckpt"] = self.fsdp_config.get("xla_fsdp_grad_ckpt", False)
+        if self.fsdp_config["xla"]:
+            if len(self.fsdp) > 0:
+                # store XLA fsdp configuration parameters into a dictionary
+                self.xla_fsdp_config = self.fsdp_config.get("xla_fsdp_settings", {})
+                # apply appropriate string to torch.dtype conversions for parameters
+                if "compute_dtype" in self.xla_fsdp_config:
+                    self.xla_fsdp_config["compute_dtype"] = getattr(torch, self.xla_fsdp_config["compute_dtype"])
+                if "buffer_dtype" in self.xla_fsdp_config:
+                    self.xla_fsdp_config["buffer_dtype"] = getattr(torch, self.xla_fsdp_config["buffer_dtype"])
+            else:
+                warnings.warn("XLA FSDP can be used only when `--fsdp` is specified.")
+        else:
+            if self.fsdp_config["xla_fsdp_grad_ckpt"]:
+                warnings.warn("`--xla_fsdp_grad_ckpt` is useful only when `--xla` is set to true.")
 
         if self.tpu_metrics_debug:
             warnings.warn(
@@ -1592,9 +1671,15 @@ class TrainingArguments:
                 # the default value.
                 self._n_gpu = torch.cuda.device_count()
         else:
-            # DISABLE distributed (for Kaggle / single GPU)
-            device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-            self._n_gpu = torch.cuda.device_count()
+            # Here, we'll use torch.distributed.
+            # Initializes the distributed backend which will take care of synchronizing nodes/GPUs
+            if not torch.distributed.is_initialized():
+                if self.xpu_backend and self.xpu_backend in ("mpi", "gloo"):
+                    torch.distributed.init_process_group(backend=self.xpu_backend, timeout=self.ddp_timeout_delta)
+                else:
+                    torch.distributed.init_process_group(backend="nccl", timeout=self.ddp_timeout_delta)
+            device = torch.device("cuda", self.local_rank)
+            self._n_gpu = 1
 
         if device.type == "cuda":
             torch.cuda.set_device(device)
