@@ -34,7 +34,6 @@ from .trainer_utils import (
 )
 from .utils import (
     ExplicitEnum,
-    cached_property,
     ccl_version,
     get_full_repo_name,
     is_accelerate_available,
@@ -53,6 +52,7 @@ from .utils import (
 )
 from .utils.import_utils import is_optimum_neuron_available
 
+from functools import cached_property
 
 logger = logging.get_logger(__name__)
 log_levels = logging.get_log_levels_dict().copy()
@@ -1592,15 +1592,9 @@ class TrainingArguments:
                 # the default value.
                 self._n_gpu = torch.cuda.device_count()
         else:
-            # Here, we'll use torch.distributed.
-            # Initializes the distributed backend which will take care of synchronizing nodes/GPUs
-            if not torch.distributed.is_initialized():
-                if self.xpu_backend and self.xpu_backend in ("mpi", "gloo"):
-                    torch.distributed.init_process_group(backend=self.xpu_backend, timeout=self.ddp_timeout_delta)
-                else:
-                    torch.distributed.init_process_group(backend="nccl", timeout=self.ddp_timeout_delta)
-            device = torch.device("cuda", self.local_rank)
-            self._n_gpu = 1
+            # DISABLE distributed (for Kaggle / single GPU)
+            device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+            self._n_gpu = torch.cuda.device_count()
 
         if device.type == "cuda":
             torch.cuda.set_device(device)
