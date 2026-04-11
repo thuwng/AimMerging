@@ -3,11 +3,16 @@
 import sys, os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
+import peft
+if not hasattr(peft, "PeftMixedModel"):
+    from peft import PeftModel
+    peft.PeftMixedModel = PeftModel
+
 import matplotlib.pyplot as plt
 
 
 from typing import List
-from peft import PeftModel
+
 import fire
 import torch
 import transformers
@@ -29,9 +34,10 @@ from peft import (
     LoraConfig,
     get_peft_model,
     get_peft_model_state_dict,
-    prepare_model_for_int8_training,
+    prepare_model_for_kbit_training,
     set_peft_model_state_dict,
 )
+prepare_model_for_int8_training = prepare_model_for_kbit_training
 
 from utils.prompter import Prompter
 from utils.prompter import Prompter
