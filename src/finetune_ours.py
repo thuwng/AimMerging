@@ -1,9 +1,11 @@
 # 新的框架
 
-import os
+import sys, os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
 import matplotlib.pyplot as plt
 
-import sys
+
 from typing import List
 from peft import PeftModel
 import fire

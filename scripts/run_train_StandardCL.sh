@@ -1,14 +1,13 @@
 #!/bin/bash
+# lấy thư mục chứa file .sh
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
-# 1. Ép Python nhìn vào cả thư mục gốc và thư mục src
-export PYTHONPATH=$PYTHONPATH:/kaggle/working/AIMMerging:/kaggle/working/AIMMerging/src
+# đi lên root repo (scripts/ → ../)
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 
-# 2. Kiểm tra nhanh xem đường dẫn có đúng không
-if [ -d "/kaggle/working/AIMMerging/src/utils" ]; then
-    echo "✅ Đã tìm thấy thư mục utils tại /src"
-else
-    echo "❌ Không tìm thấy thư mục utils. Kiểm tra lại đường dẫn!"
-fi
+cd "$PROJECT_ROOT"
+
+export PYTHONPATH="$PROJECT_ROOT:$PROJECT_ROOT/src:$PYTHONPATH"
 
 # 设置起始变量
 
