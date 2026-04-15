@@ -146,27 +146,23 @@ from transformers.trainer_callback import (
     TrainerControl,
     TrainerState,
 )
-from transformers.trainer_pt_utils import (
-    DistributedLengthGroupedSampler,
-    DistributedSamplerWithLoop,
-    DistributedTensorGatherer,
-    IterableDatasetShard,
-    LabelSmoother,
-    LengthGroupedSampler,
-    SequentialDistributedSampler,
-    ShardSampler,
-    distributed_broadcast_scalars,
-    distributed_concat,
-    find_batch_size,
-    get_model_param_count,
-    get_module_class_from_name,
-    get_parameter_names,
-    nested_concat,
-    nested_detach,
-    nested_numpify,
-    nested_truncate,
-    nested_xla_mesh_reduce,
-    reissue_pt_warnings,
+from transformers.trainer_utils import (
+    PREFIX_CHECKPOINT_DIR,
+    BestRun,
+    EvalLoopOutput,
+    EvalPrediction,
+    IntervalStrategy,
+    PredictionOutput,
+    TrainOutput,
+    default_compute_objective,
+    denumpify_detensorize,
+    enable_full_determinism,
+    find_executable_batch_size,
+    get_last_checkpoint,
+    has_length,
+    number_of_arguments,
+    set_seed,
+    speed_metrics,
 )
 from transformers.trainer_utils import (
     PREFIX_CHECKPOINT_DIR,
@@ -220,6 +216,33 @@ from transformers.utils import (
 )
 from transformers.utils.generic import ContextManagers
 
+# ===== STUBS FOR REMOVED FEATURES =====
+
+class FSDPOption:
+    pass
+
+class ShardedDDPOption:
+    pass
+
+class HPSearchBackend:
+    pass
+
+class HubStrategy:
+    pass
+
+class TrainerMemoryTracker:
+    def __init__(self, *args, **kwargs):
+        pass
+
+def default_hp_space(*args, **kwargs):
+    return {}
+
+def seed_worker(*args, **kwargs):
+    pass
+
+class RemoveColumnsCollator:
+    def __init__(self, *args, **kwargs):
+        pass
 
 _is_native_cpu_amp_available = is_torch_greater_or_equal_than_1_10
 
