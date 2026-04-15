@@ -73,45 +73,22 @@ from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, Un
 
 from tqdm.auto import tqdm
 
-import transformers
 
 # Integrations must be imported before ML frameworks:
 # isort: off
-def default_hp_search_backend():
-    return None
-
-def hp_params(trial):
-    return {}
-
-def is_fairscale_available():
-    return False
-
-def is_optuna_available():
-    return False
-
-def is_ray_tune_available():
-    return False
-
-def is_sigopt_available():
-    return False
-
-def is_wandb_available():
-    return False
-
-def run_hp_search_optuna(*args, **kwargs):
-    return None
-
-def run_hp_search_ray(*args, **kwargs):
-    return None
-
-def run_hp_search_sigopt(*args, **kwargs):
-    return None
-
-def run_hp_search_wandb(*args, **kwargs):
-    return None
-
-from transformers.integrations import (
+from .integrations import (
+    default_hp_search_backend,
     get_reporting_integration_callbacks,
+    hp_params,
+    is_fairscale_available,
+    is_optuna_available,
+    is_ray_tune_available,
+    is_sigopt_available,
+    is_wandb_available,
+    run_hp_search_optuna,
+    run_hp_search_ray,
+    run_hp_search_sigopt,
+    run_hp_search_wandb,
 )
 
 # isort: on
@@ -125,24 +102,19 @@ from torch import nn
 from torch.utils.data import DataLoader, Dataset, RandomSampler, SequentialSampler
 from torch.utils.data.distributed import DistributedSampler
 
-from transformers import __version__
-from transformers.configuration_utils import PretrainedConfig
-from transformers.data.data_collator import DataCollator, DataCollatorWithPadding, default_data_collator
-from transformers.debug_utils import DebugOption, DebugUnderflowOverflow
-from transformers.deepspeed import deepspeed_init, is_deepspeed_zero3_enabled
-from transformers.dependency_versions_check import dep_version_check
-from transformers.modelcard import TrainingSummary
-from transformers.modeling_utils import PreTrainedModel, load_sharded_checkpoint, unwrap_model
-from transformers.models.auto.modeling_auto import MODEL_FOR_CAUSAL_LM_MAPPING_NAMES, MODEL_MAPPING_NAMES
-from transformers.optimization import Adafactor, get_scheduler
-from transformers.pytorch_utils import ALL_LAYERNORM_LAYERS
-def is_torch_greater_or_equal_than_1_10():
-    return True
-
-def is_torch_less_than_1_11():
-    return False
-from transformers.tokenization_utils_base import PreTrainedTokenizerBase
-from transformers.trainer_callback import (
+from . import __version__
+from .configuration_utils import PretrainedConfig
+from .data.data_collator import DataCollator, DataCollatorWithPadding, default_data_collator
+from .debug_utils import DebugOption, DebugUnderflowOverflow
+from .deepspeed import deepspeed_init, is_deepspeed_zero3_enabled
+from .dependency_versions_check import dep_version_check
+from .modelcard import TrainingSummary
+from .modeling_utils import PreTrainedModel, load_sharded_checkpoint, unwrap_model
+from .models.auto.modeling_auto import MODEL_FOR_CAUSAL_LM_MAPPING_NAMES, MODEL_MAPPING_NAMES
+from .optimization import Adafactor, get_scheduler
+from .pytorch_utils import ALL_LAYERNORM_LAYERS, is_torch_greater_or_equal_than_1_10, is_torch_less_than_1_11
+from .tokenization_utils_base import PreTrainedTokenizerBase
+from .trainer_callback import (
     CallbackHandler,
     DefaultFlowCallback,
     PrinterCallback,
@@ -151,27 +123,56 @@ from transformers.trainer_callback import (
     TrainerControl,
     TrainerState,
 )
-from transformers.trainer_utils import (
+from .trainer_pt_utils import (
+    DistributedLengthGroupedSampler,
+    DistributedSamplerWithLoop,
+    DistributedTensorGatherer,
+    IterableDatasetShard,
+    LabelSmoother,
+    LengthGroupedSampler,
+    SequentialDistributedSampler,
+    ShardSampler,
+    distributed_broadcast_scalars,
+    distributed_concat,
+    find_batch_size,
+    get_model_param_count,
+    get_module_class_from_name,
+    get_parameter_names,
+    nested_concat,
+    nested_detach,
+    nested_numpify,
+    nested_truncate,
+    nested_xla_mesh_reduce,
+    reissue_pt_warnings,
+)
+from .trainer_utils import (
     PREFIX_CHECKPOINT_DIR,
     BestRun,
     EvalLoopOutput,
     EvalPrediction,
+    FSDPOption,
+    HPSearchBackend,
+    HubStrategy,
     IntervalStrategy,
     PredictionOutput,
+    RemoveColumnsCollator,
+    ShardedDDPOption,
+    TrainerMemoryTracker,
     TrainOutput,
     default_compute_objective,
+    default_hp_space,
     denumpify_detensorize,
     enable_full_determinism,
     find_executable_batch_size,
     get_last_checkpoint,
     has_length,
     number_of_arguments,
+    seed_worker,
     set_seed,
     speed_metrics,
 )
-
-from transformers.training_args import OptimizerNames, ParallelMode, TrainingArguments
-from transformers.utils import (
+from .training_args import OptimizerNames, ParallelMode, TrainingArguments
+from .utils import (
     CONFIG_NAME,
     SAFE_WEIGHTS_INDEX_NAME,
     SAFE_WEIGHTS_NAME,
@@ -194,35 +195,8 @@ from transformers.utils import (
     logging,
     strtobool,
 )
-from transformers.utils.generic import ContextManagers
+from .utils.generic import ContextManagers
 
-# ===== STUBS FOR REMOVED FEATURES =====
-
-class FSDPOption:
-    pass
-
-class ShardedDDPOption:
-    pass
-
-class HPSearchBackend:
-    pass
-
-class HubStrategy:
-    pass
-
-class TrainerMemoryTracker:
-    def __init__(self, *args, **kwargs):
-        pass
-
-def default_hp_space(*args, **kwargs):
-    return {}
-
-def seed_worker(*args, **kwargs):
-    pass
-
-class RemoveColumnsCollator:
-    def __init__(self, *args, **kwargs):
-        pass
 
 _is_native_cpu_amp_available = is_torch_greater_or_equal_than_1_10
 
@@ -230,7 +204,7 @@ DEFAULT_CALLBACKS = [DefaultFlowCallback]
 DEFAULT_PROGRESS_CALLBACK = ProgressCallback
 
 if is_in_notebook():
-    from transformers.utils.notebook import NotebookProgressCallback
+    from .utils.notebook import NotebookProgressCallback
 
     DEFAULT_PROGRESS_CALLBACK = NotebookProgressCallback
 
@@ -261,7 +235,7 @@ if is_sagemaker_mp_enabled():
 
     IS_SAGEMAKER_MP_POST_1_10 = version.parse(SMP_VERSION) >= version.parse("1.10")
 
-    from transformers.trainer_pt_utils import smp_forward_backward, smp_forward_only, smp_gather, smp_nested_concat
+    from .trainer_pt_utils import smp_forward_backward, smp_forward_only, smp_gather, smp_nested_concat
 else:
     IS_SAGEMAKER_MP_POST_1_10 = False
 
@@ -375,7 +349,7 @@ class Trainer:
 
     """
 
-    from transformers.trainer_pt_utils import _get_learning_rate, log_metrics, metrics_format, save_metrics, save_state
+    from .trainer_pt_utils import _get_learning_rate, log_metrics, metrics_format, save_metrics, save_state
 
     def __init__(
         self,
@@ -1400,7 +1374,7 @@ class Trainer:
             optimizer_cls = Adafactor
             optimizer_kwargs.update({"scale_parameter": False, "relative_step": False})
         elif args.optim == OptimizerNames.ADAMW_HF:
-            from transformers.optimization import AdamW
+            from .optimization import AdamW
 
             optimizer_cls = AdamW
             optimizer_kwargs.update(adam_kwargs)

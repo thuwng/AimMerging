@@ -23,12 +23,11 @@ from datetime import timedelta
 from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
-import transformers
 
 from packaging import version
 
-from transformers.debug_utils import DebugOption
-from transformers.trainer_utils import (
+from .debug_utils import DebugOption
+from .trainer_utils import (
     EvaluationStrategy,
     FSDPOption,
     HubStrategy,
@@ -36,7 +35,7 @@ from transformers.trainer_utils import (
     SchedulerType,
     ShardedDDPOption,
 )
-from transformers.utils import (
+from .utils import (
     ExplicitEnum,
     cached_property,
     ccl_version,
@@ -55,7 +54,7 @@ from transformers.utils import (
     logging,
     requires_backends,
 )
-from transformers.utils.import_utils import is_optimum_neuron_available
+from .utils.import_utils import is_optimum_neuron_available
 
 
 logger = logging.get_logger(__name__)
@@ -1324,7 +1323,7 @@ class TrainingArguments:
             self.report_to = "all"
         if self.report_to == "all" or self.report_to == ["all"]:
             # Import at runtime to avoid a circular import.
-            from transformers.integrations import get_available_reporting_integrations
+            from .integrations import get_available_reporting_integrations
 
             self.report_to = get_available_reporting_integrations()
         elif self.report_to == "none" or self.report_to == ["none"]:
@@ -1619,7 +1618,7 @@ class TrainingArguments:
             self._n_gpu = 1
         elif self.deepspeed:
             # deepspeed inits torch.distributed internally
-            from transformers.deepspeed import is_deepspeed_available
+            from .deepspeed import is_deepspeed_available
 
             if not is_deepspeed_available():
                 raise ImportError("--deepspeed requires deepspeed: `pip install deepspeed`.")

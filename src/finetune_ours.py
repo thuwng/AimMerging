@@ -1,8 +1,5 @@
 # 新的框架
 
-import sys
-sys.path.append("/kaggle/working/AimMerging")
-
 import os
 import matplotlib.pyplot as plt
 
@@ -14,11 +11,7 @@ import torch
 import transformers
 import shutil
 from datasets import load_dataset
-
-import transformers
-from trainer import Trainer
-from training_args import TrainingArguments
-
+from transformers import AutoConfig, AutoModelForSeq2SeqLM, AutoTokenizer
 import gc
 import numpy as np
 import pandas as pd
@@ -341,7 +334,7 @@ def train(
     )
 
 
-    trainer = Trainer(
+    trainer = transformers.Trainer(
         model=model,
         train_dataset=train_data,
         train_dataset_memory=train_data_memory, # new
@@ -357,7 +350,7 @@ def train(
         max_step_len = max_step_len, #new
         min_step_len = min_step_len, #new
         threshold_factor = threshold_factor,
-        args=TrainingArguments(
+        args=transformers.TrainingArguments(
             per_device_train_batch_size=micro_batch_size,
             gradient_accumulation_steps=gradient_accumulation_steps,
             train_batch_size_outer=train_batch_size_outer,# new
