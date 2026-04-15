@@ -1,7 +1,7 @@
 # 新的框架
 
 import sys
-sys.path.append("/kaggle/working/AimMerging")S
+sys.path.append("/kaggle/working/AimMerging")
 
 import os
 import matplotlib.pyplot as plt
