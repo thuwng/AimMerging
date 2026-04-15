@@ -80,19 +80,38 @@ import transformers
 def default_hp_search_backend():
     return None
 
+def hp_params(trial):
+    return {}
+
+def is_fairscale_available():
+    return False
+
+def is_optuna_available():
+    return False
+
+def is_ray_tune_available():
+    return False
+
+def is_sigopt_available():
+    return False
+
+def is_wandb_available():
+    return False
+
+def run_hp_search_optuna(*args, **kwargs):
+    return None
+
+def run_hp_search_ray(*args, **kwargs):
+    return None
+
+def run_hp_search_sigopt(*args, **kwargs):
+    return None
+
+def run_hp_search_wandb(*args, **kwargs):
+    return None
+
 from transformers.integrations import (
-    #default_hp_search_backend,
     get_reporting_integration_callbacks,
-    hp_params,
-    is_fairscale_available,
-    is_optuna_available,
-    is_ray_tune_available,
-    is_sigopt_available,
-    is_wandb_available,
-    run_hp_search_optuna,
-    run_hp_search_ray,
-    run_hp_search_sigopt,
-    run_hp_search_wandb,
 )
 
 # isort: on
